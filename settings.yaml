@@ -1,0 +1,7 @@
+env:
+  - name: PROJECT_ID
+    value: <GKE PROJECT NAME>
+  - name: REGION
+    value: <GKE REGION>
+gcsSecret: pypicloud-gcs
+envSecret: pypicloud-env

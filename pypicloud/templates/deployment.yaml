@@ -1,0 +1,94 @@
+apiVersion: apps/v1beta2
+kind: Deployment
+metadata:
+  name: {{ include "pypicloud.fullname" . }}
+  labels:
+    app: {{ include "pypicloud.name" . }}
+    chart: {{ include "pypicloud.chart" . }}
+    release: {{ .Release.Name }}
+    heritage: {{ .Release.Service }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      app: {{ include "pypicloud.name" . }}
+      release: {{ .Release.Name }}
+  template:
+    metadata:
+      labels:
+        app: {{ include "pypicloud.name" . }}
+        release: {{ .Release.Name }}
+    spec:
+      containers:
+        - name: {{ .Chart.Name }}
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: 8080
+              protocol: TCP
+          volumeMounts:
+          - name: config-volume
+            mountPath: /etc/pypicloud
+{{- if .Values.gcsSecret }}
+          - name: secret-volume
+            mountPath: /etc/pypicloud-secret
+{{- end }}
+          livenessProbe:
+            httpGet:
+              path: /
+              port: http
+          readinessProbe:
+            httpGet:
+              path: /
+              port: http
+          env:
+            # Get environment variables from env
+{{ toYaml .Values.env | indent 12 }}
+            # Get environment variables from secret, if defined in envSecret
+{{- if .Values.envSecret }}
+            - name: USER_ADMIN
+              valueFrom:
+                secretKeyRef:
+                    name: {{ .Values.envSecret }}
+                    key: userAdmin
+            - name: USER_USER
+              valueFrom:
+                secretKeyRef:
+                    name: {{ .Values.envSecret }}
+                    key: userUser
+            - name: SESSION_ENCRYPT_KEY
+              valueFrom:
+                secretKeyRef:
+                    name: {{ .Values.envSecret }}
+                    key: sessionEncryptKey
+            - name: SESSION_VALIDATE_KEY
+              valueFrom:
+                secretKeyRef:
+                    name: {{ .Values.envSecret }}
+                    key: sessionValidateKey
+{{- end }}
+
+          resources:
+{{ toYaml .Values.resources | indent 12 }}
+      volumes:
+        - name: config-volume
+          configMap:
+            name: {{ include "pypicloud.fullname" . }}
+{{- if .Values.gcsSecret }}
+        - name: secret-volume
+          secret:
+            secretName: {{ .Values.gcsSecret }}
+{{- end }}
+    {{- with .Values.nodeSelector }}
+      nodeSelector:
+{{ toYaml . | indent 8 }}
+    {{- end }}
+    {{- with .Values.affinity }}
+      affinity:
+{{ toYaml . | indent 8 }}
+    {{- end }}
+    {{- with .Values.tolerations }}
+      tolerations:
+{{ toYaml . | indent 8 }}
+    {{- end }}

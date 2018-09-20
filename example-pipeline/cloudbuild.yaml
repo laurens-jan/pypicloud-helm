@@ -1,0 +1,31 @@
+steps:
+# Notes:
+# - '|| exit' has script exit on error, thus failing build in case of an error
+# - gcloud container is present on build server and has python 2.7. Therefore using that to build.
+- name: 'gcr.io/cloud-builders/gcloud'
+  id: python
+  entrypoint: /bin/bash
+  args:
+  - '-c'
+  - |
+    # Install setuptools and twine (using python 2.7)
+    pip install setuptools twine || exit
+
+    # Set version number for setup.py
+    export VERSION=$TAG_NAME
+
+    # Build package
+    python setup.py sdist || exit
+
+    # Get credentials from gcloud
+    gcloud beta container clusters get-credentials --project="$PROJECT_ID" --region="${_CLOUDSDK_COMPUTE_ZONE}" "${_CLOUDSDK_CONTAINER_CLUSTER}" || exit
+
+    # Upload package to Pypicloud
+    twine upload --repository-url https://<PYPI_URL>/simple -u admin \
+      -p `kubectl get secret -n ops pypicloud-env -o jsonpath='{.data.adminPassword}' | base64 -d` dist/* || exit
+
+substitutions:
+  _CLOUDSDK_COMPUTE_ZONE: <COMPUTE_ZONE>
+  _CLOUDSDK_CONTAINER_CLUSTER: <KUBERNETES_CLUSTER>
+
+timeout: 3600s

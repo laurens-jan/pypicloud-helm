@@ -1,0 +1,10 @@
+apiVersion: v1
+kind: Secret
+metadata:
+  name: pypicloud-env
+type: Opaque
+data:
+  userUser: <FILL_OUT, see below>
+  userAdmin: <FILL_OUT, see below>
+  sessionEncryptKey: <FILL_OUT, see https://pypicloud.readthedocs.io/en/latest/topics/configuration.html#session-encrypt-key>
+  sessionValidateKey: <FILL_OUT, see https://pypicloud.readthedocs.io/en/latest/topics/configuration.html#session-encrypt-key>
